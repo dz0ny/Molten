@@ -565,7 +565,7 @@ PHP_MINIT_FUNCTION(molten)
     zend_execute_internal = mo_execute_internal;
 
     /* Overload function */
-    molten_reload_curl_function();
+    //molten_reload_curl_function();
 
     /* Replace error call back */
     trace_original_error_cb = zend_error_cb;

@@ -1244,6 +1244,16 @@ static void default_capture(mo_interceptor_t *pit, mo_frame_t *frame)
 }
 /* }}} */
 
+/* {{{ default capture */
+static void wp_default_capture(mo_interceptor_t *pit, mo_frame_t *frame)
+{
+    init_span_extra(frame);
+    char *value = convert_args_to_string(frame); 
+    pit->psb->span_add_ba_ex(frame->span_extra,  "event", value, frame->entry_time, pit->pct, BA_NORMAL);
+    efree(value);
+}
+/* }}} */
+
 /* {{{ guzzle request capture */
 static void guzzle_request_capture(mo_interceptor_t *pit, mo_frame_t *frame) 
 {
@@ -1295,6 +1305,60 @@ static void guzzle_request_record(mo_interceptor_t *pit, mo_frame_t *frame)
     mo_chain_add_span(pit->pct->pcl, span);
 }
 /* }}} */
+
+/* {{{ wordpress action record */
+static void wp_action_record(mo_interceptor_t *pit, mo_frame_t *frame)
+{
+    zval *span = build_com_record(pit, frame, 0);
+    
+    /* merge span extra */
+    merge_span_extra(span, frame);
+    
+    /* add component */
+    pit->psb->span_add_ba_ex(span,  "componet", "wp.do_action", frame->exit_time, pit->pct, BA_NORMAL);
+
+    /* check exception */
+    SET_DEFAULT_EXCEPTION(frame, pit);
+
+    /* add span */
+    mo_chain_add_span(pit->pct->pcl, span);
+}
+/* }}} */
+
+static void wp_remote_get(mo_interceptor_t *pit, mo_frame_t *frame)
+{
+    zval *span = build_com_record(pit, frame, 0);
+    
+    /* merge span extra */
+    merge_span_extra(span, frame);
+    
+    /* add component */
+    pit->psb->span_add_ba_ex(span,  "componet", "wp_remote_get", frame->exit_time, pit->pct, BA_NORMAL);
+
+    /* check exception */
+    SET_DEFAULT_EXCEPTION(frame, pit);
+
+    /* add span */
+    mo_chain_add_span(pit->pct->pcl, span);
+}
+
+static void wp_remote_post(mo_interceptor_t *pit, mo_frame_t *frame)
+{
+    zval *span = build_com_record(pit, frame, 0);
+    
+    /* merge span extra */
+    merge_span_extra(span, frame);
+    
+    /* add component */
+    pit->psb->span_add_ba_ex(span,  "componet", "wp_remote_post", frame->exit_time, pit->pct, BA_NORMAL);
+
+    /* check exception */
+    SET_DEFAULT_EXCEPTION(frame, pit);
+
+    /* add span */
+    mo_chain_add_span(pit->pct->pcl, span);
+}
+
 
 /************************************************/
 /******************elasticsearch*****************/
@@ -1499,6 +1563,11 @@ void mo_intercept_ctor(mo_interceptor_t *pit, struct mo_chain_st *pct, mo_span_b
     /* guzzle */
     ADD_INTERCEPTOR_TAG(pit, GuzzleHttp\\Client);
     INIT_INTERCEPTOR_ELE(GuzzleHttp\\Client@request, &guzzle_request_capture, &guzzle_request_record);
+
+    /* wp */
+    INIT_INTERCEPTOR_ELE(do_action, &wp_default_capture, &wp_action_record);
+    INIT_INTERCEPTOR_ELE(wp_remote_get, &wp_default_capture, &wp_remote_get);
+    INIT_INTERCEPTOR_ELE(wp_remote_post, &wp_default_capture, &wp_remote_post);
 
     /* elastic search */
     {
